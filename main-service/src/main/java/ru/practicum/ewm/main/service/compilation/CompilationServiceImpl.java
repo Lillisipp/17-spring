@@ -20,7 +20,9 @@ import ru.practicum.ewm.main.repository.compilation.CompilationRepository;
 import ru.practicum.ewm.main.repository.events.EventsRepository;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -122,20 +124,17 @@ public class CompilationServiceImpl implements CompilationService {
         List<CompilationEvent> compilationEvents = compilationEventRepository
                 .findByCompilationIds(cIds);
 
-        List<CompilationDto> result = new ArrayList<>();
-
-        for (Compilation c : compilations) {
-            List<Events> events1 = new ArrayList<>();
-            for (CompilationEvent ce : compilationEvents) {
-                if (c.getId().equals(ce.getCompilation().getId())) {
-                    events1.add(ce.getEvent());
-                }
-            }
-            CompilationDto dto = CompilationMapper.toDto(c, events1.stream().map(eventsMapper::toShortDto).toList());
-            result.add(dto);
+        Map<Long, CompilationDto> resultMap = new HashMap<>();
+        for (CompilationEvent ce: compilationEvents) {
+            resultMap.putIfAbsent(ce.getCompilation().getId(), CompilationMapper.toDto(ce.getCompilation(), new ArrayList<>()));
+            resultMap.get(ce.getCompilation().getId()).getEvents().add(eventsMapper.toShortDto(ce.getEvent()));
         }
 
-        return result;
+        for (Compilation c: compilations) {
+            resultMap.putIfAbsent(c.getId(), CompilationMapper.toDto(c, List.of()));
+        }
+
+        return resultMap.values().stream().toList();
     }
 
 }
